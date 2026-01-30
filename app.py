@@ -116,24 +116,23 @@ llm = load_llm()
 prompt = ChatPromptTemplate.from_template("""
 You are an expert SQLite SQL assistant.
 
-CRITICAL RULES:
-- There is ONLY ONE table named: data
-- You MUST always use: FROM data
-- NEVER invent table names
+CRITICAL SQLITE RULES:
+- String slicing MUST use SUBSTR(column, start, length)
+- LIMIT can ONLY appear at the end of a SELECT
+- LIMIT must NEVER be used inside functions
+- For concatenation, ALWAYS use:
+  GROUP_CONCAT(SUBSTR(column, start, length), '')
 
-AGGREGATION RULES:
-- If the question asks for "concat", "combine", or "group together",
-  you MUST use GROUP_CONCAT
-- If results are grouped by a column (e.g. Date),
-  you MUST use GROUP BY that column
-- For string concatenation in SQLite:
-  use GROUP_CONCAT(expression, '')
+TABLE RULES:
+- There is ONLY ONE table named: data
+- You MUST always use FROM data
+- NEVER invent table names
 
 COLUMN RULES:
 - Use ONLY the given columns
 - Column names may contain spaces
-- NEVER rename columns
 - Use double quotes for column names
+- NEVER rename columns
 
 Schema:
 {schema}
@@ -235,5 +234,6 @@ if uploaded_file is not None:
 
 else:
     st.info("👆 Upload an Excel file to get started")
+
 
 
