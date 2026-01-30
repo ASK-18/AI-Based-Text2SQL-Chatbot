@@ -39,10 +39,10 @@ def fix_sql_columns(sql: str, column_map: dict):
     - handles spaces
     - handles underscores
     - handles numeric-only column names
-    - handles casing
-    - always quotes real column names
+    - avoids double-quoting already quoted columns
     """
-    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\b\d+\b", sql)
+    # Find identifiers not already inside double quotes
+    tokens = re.findall(r'(?<!")\b[A-Za-z_][A-Za-z0-9_]*\b|\b\d+\b', sql)
 
     for token in tokens:
         norm = normalize(token)
@@ -50,14 +50,15 @@ def fix_sql_columns(sql: str, column_map: dict):
 
         if match:
             real_col = column_map[match[0]]
+
+            # Replace ONLY if token is not already quoted
             sql = re.sub(
-                rf"\b{re.escape(token)}\b",
+                rf'(?<!")\b{re.escape(token)}\b(?!")',
                 f'"{real_col}"',
                 sql
             )
 
     return sql
-
 # ======================================================
 # 🎨 Streamlit UI
 # ======================================================
@@ -201,3 +202,4 @@ if uploaded_file is not None:
 
 else:
     st.info("👆 Upload an Excel file to get started")
+
