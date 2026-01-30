@@ -1,6 +1,7 @@
 streamlit
 pandas
 python-dotenv
+openpyxl
 
 langchain-core
 langchain-community
@@ -8,4 +9,3 @@ langchain-huggingface
 
 faiss-cpu
 sentence-transformers
-openpyxl
