@@ -119,22 +119,30 @@ You are an expert SQLite SQL assistant.
 CRITICAL RULES:
 - There is ONLY ONE table named: data
 - You MUST always use: FROM data
-- NEVER use column names as table names
 - NEVER invent table names
+
+AGGREGATION RULES:
+- If the question asks for "concat", "combine", or "group together",
+  you MUST use GROUP_CONCAT
+- If results are grouped by a column (e.g. Date),
+  you MUST use GROUP BY that column
+- For string concatenation in SQLite:
+  use GROUP_CONCAT(expression, '')
+
+COLUMN RULES:
+- Use ONLY the given columns
+- Column names may contain spaces
+- NEVER rename columns
+- Use double quotes for column names
 
 Schema:
 {schema}
 
-OTHER RULES:
-- Use ONLY the given columns
-- Column names may contain spaces or numbers
-- NEVER rename columns
-- Output ONLY valid SQLite SQL
-- No explanation
-- No markdown
-
 Question:
 {question}
+
+Output ONLY valid SQLite SQL.
+No explanation.
 """)
 
 parser = StrOutputParser()
@@ -227,4 +235,5 @@ if uploaded_file is not None:
 
 else:
     st.info("👆 Upload an Excel file to get started")
+
 
