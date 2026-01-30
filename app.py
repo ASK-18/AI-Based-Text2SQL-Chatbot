@@ -19,7 +19,7 @@ from langchain_huggingface import (
 )
 
 # ======================================================
-# 🔧 Column Normalization & Auto-Fix Utilities
+# 🔧 Utilities: Column + Table Fixers
 # ======================================================
 
 def normalize(text: str) -> str:
@@ -27,38 +27,44 @@ def normalize(text: str) -> str:
 
 
 def build_column_map(columns):
-    """
-    Maps normalized column identifiers to real Excel column names
-    """
     return {normalize(col): col for col in columns}
 
 
 def fix_sql_columns(sql: str, column_map: dict):
     """
-    Auto-fix column names in SQL:
-    - handles spaces
-    - handles underscores
-    - handles numeric-only column names
-    - avoids double-quoting already quoted columns
+    Fix column names:
+    - spaces
+    - underscores
+    - numeric-only names
+    - avoid double quoting
     """
-    # Find identifiers not already inside double quotes
     tokens = re.findall(r'(?<!")\b[A-Za-z_][A-Za-z0-9_]*\b|\b\d+\b', sql)
 
     for token in tokens:
         norm = normalize(token)
         match = get_close_matches(norm, column_map.keys(), n=1, cutoff=0.75)
-
         if match:
             real_col = column_map[match[0]]
-
-            # Replace ONLY if token is not already quoted
             sql = re.sub(
                 rf'(?<!")\b{re.escape(token)}\b(?!")',
                 f'"{real_col}"',
                 sql
             )
-
     return sql
+
+
+def fix_table_name(sql: str, table_name: str = "data"):
+    """
+    Force correct table name.
+    Rewrites any FROM <something> to FROM data
+    """
+    return re.sub(
+        r'FROM\s+["\']?[A-Za-z_][A-Za-z0-9_]*["\']?',
+        f'FROM {table_name}',
+        sql,
+        flags=re.IGNORECASE
+    )
+
 # ======================================================
 # 🎨 Streamlit UI
 # ======================================================
@@ -96,14 +102,19 @@ llm = load_llm()
 prompt = ChatPromptTemplate.from_template("""
 You are an expert SQLite SQL assistant.
 
+CRITICAL RULES:
+- There is ONLY ONE table named: data
+- You MUST always use: FROM data
+- NEVER use column names as table names
+- NEVER invent table names
+
 Schema:
 {schema}
 
-STRICT RULES:
+OTHER RULES:
 - Use ONLY the given columns
 - Column names may contain spaces or numbers
 - NEVER rename columns
-- ALWAYS wrap column names in double quotes if unsure
 - Output ONLY valid SQLite SQL
 - No explanation
 - No markdown
@@ -153,7 +164,6 @@ if uploaded_file is not None:
         )
         vectordb = FAISS.from_documents(docs, embeddings)
 
-        # Column map for auto-fixing
         column_map = build_column_map(df.columns.tolist())
 
         # ----------------------------
@@ -163,10 +173,8 @@ if uploaded_file is not None:
 
         if st.button("Run Query") and question.strip():
             with st.spinner("Thinking..."):
-                # Retrieve schema
                 schema = vectordb.similarity_search(question, k=1)[0].page_content
 
-                # Generate SQL
                 chain = prompt | llm | parser
                 sql_query = chain.invoke({
                     "schema": schema,
@@ -184,10 +192,13 @@ if uploaded_file is not None:
                     .strip()
                 )
 
-                # 🔥 Auto-fix column names (spaces, underscores, numbers)
+                # 🔥 Fix columns
                 sql_query = fix_sql_columns(sql_query, column_map)
 
-                # Execute SQL
+                # 🔥 Force correct table name
+                sql_query = fix_table_name(sql_query, table_name="data")
+
+                # Execute
                 result_df = pd.read_sql_query(sql_query, conn)
 
                 # Display
@@ -202,4 +213,3 @@ if uploaded_file is not None:
 
 else:
     st.info("👆 Upload an Excel file to get started")
-
