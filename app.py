@@ -21,6 +21,11 @@ from langchain_huggingface import (
 # ======================================================
 # 🔧 Utilities: Column + Table Fixers
 # ======================================================
+SQL_KEYWORDS = {
+    "select", "from", "where", "and", "or", "like", "in", "is",
+    "null", "not", "group", "by", "order", "having", "limit",
+    "count", "sum", "avg", "min", "max", "distinct"
+}
 
 def normalize(text: str) -> str:
     return re.sub(r"[^a-z0-9]", "", str(text).lower())
@@ -33,23 +38,32 @@ def build_column_map(columns):
 def fix_sql_columns(sql: str, column_map: dict):
     """
     Fix column names:
-    - spaces
-    - underscores
-    - numeric-only names
-    - avoid double quoting
+    - handles spaces & underscores
+    - avoids SQL keywords & functions
+    - avoids double quoting
+    - DOES NOT handle numeric-only tokens
     """
-    tokens = re.findall(r'(?<!")\b[A-Za-z_][A-Za-z0-9_]*\b|\b\d+\b', sql)
+    tokens = re.findall(r'(?<!")\b[A-Za-z_][A-Za-z0-9_]*\b', sql)
 
     for token in tokens:
+        token_lower = token.lower()
+
+        # Skip SQL keywords / functions
+        if token_lower in SQL_KEYWORDS:
+            continue
+
         norm = normalize(token)
         match = get_close_matches(norm, column_map.keys(), n=1, cutoff=0.75)
+
         if match:
             real_col = column_map[match[0]]
+
             sql = re.sub(
                 rf'(?<!")\b{re.escape(token)}\b(?!")',
                 f'"{real_col}"',
                 sql
             )
+
     return sql
 
 
@@ -213,3 +227,4 @@ if uploaded_file is not None:
 
 else:
     st.info("👆 Upload an Excel file to get started")
+
