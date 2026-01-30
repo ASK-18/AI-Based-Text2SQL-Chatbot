@@ -141,6 +141,14 @@ SQLITE STRING RULES:
   - GROUP_CONCAT(expression, separator)
 - NEVER pass multiple expressions to GROUP_CONCAT
 
+INTENT RULES:
+- If the question refers to a single person or a specific filter,
+  DO NOT use GROUP_CONCAT
+- Use GROUP_CONCAT ONLY when the question explicitly asks to
+  combine results from multiple rows
+- For password generation, use row-wise string concatenation
+  with the || operator
+
 Schema:
 {schema}
 
@@ -241,6 +249,7 @@ if uploaded_file is not None:
 
 else:
     st.info("👆 Upload an Excel file to get started")
+
 
 
 
