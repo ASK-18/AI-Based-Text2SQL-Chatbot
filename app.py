@@ -134,6 +134,13 @@ COLUMN RULES:
 - Use double quotes for column names
 - NEVER rename columns
 
+SQLITE STRING RULES:
+- To join strings, use: expr1 || expr2 || expr3
+- GROUP_CONCAT accepts ONLY:
+  - GROUP_CONCAT(expression)
+  - GROUP_CONCAT(expression, separator)
+- NEVER pass multiple expressions to GROUP_CONCAT
+
 Schema:
 {schema}
 
@@ -234,6 +241,7 @@ if uploaded_file is not None:
 
 else:
     st.info("👆 Upload an Excel file to get started")
+
 
 
 
